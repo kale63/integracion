@@ -15,12 +15,12 @@
 </head>
 <body>
  	<div class="container">
- 		<h1 id="title">LED</h1>
- 		<button id="led-toggle" class="led-button" aria-pressed="false" aria-label="Turn LED on" title="Turn LED on">
- 			<img id="led-img" class="led-img" src="button_off.png" alt="LED is off" draggable="false">
+ 		<h1 id="title">Secuencia</h1>
+ 		<button id="led-toggle" class="led-button" aria-label="Trigger sequence" title="Trigger sequence">
+ 			<img id="led-img" class="led-img" src="button.png" alt="Trigger" draggable="false">
  		</button>
 
- 		<div class="status"><strong id="state-text">OFF</strong></div>
+ 		<div class="status"><strong id="state-text"></strong></div>
  	</div>
 
  	<script>
@@ -29,28 +29,28 @@
  			const img = document.getElementById('led-img');
  			const stateText = document.getElementById('state-text');
 
- 			const OFF_SRC = 'button_off.png';
- 			const ON_SRC = 'button_on.png';
+ 			const BUTTON_IMG = 'button.png';
  			const SERVER_IP = '192.168.100.80';
 
- 			let isOff = true;
+ 			let isRunning = false;
 
- 			function updateUI(){
- 				console.log('[DEBUG] Updating UI - isOff:', isOff);
- 				btn.setAttribute('aria-pressed', String(!isOff));
- 				btn.setAttribute('aria-label', isOff ? 'Turn LED on' : 'Turn LED off');
- 				btn.title = isOff ? 'Turn LED on' : 'Turn LED off';
- 				img.src = isOff ? ON_SRC : OFF_SRC;
- 				stateText.textContent = isOff ? 'ENCENDER' : 'APAGAR';
- 				console.log('[DEBUG] UI updated - Image:', img.src, '- Text:', stateText.textContent);
+ 			function updateUI(message){
+ 				stateText.textContent = message || 'Invertir dirección';
  			}
 
- 			async function toggle(e){
+ 			async function trigger(e){
  				console.log('[DEBUG] Button clicked!');
  				if(e && typeof e.preventDefault === 'function') e.preventDefault();
- 				const endpoint = isOff ? '/led/on' : '/led/off';
- 				const url = `http://${SERVER_IP}${endpoint}`;
- 				console.log('[DEBUG] Current state - isOff:', isOff);
+ 				
+ 				if(isRunning) {
+ 					console.log('[DEBUG] Sequence already running, ignoring click');
+ 					return;
+ 				}
+ 				
+ 				isRunning = true;
+ 				stateText.textContent = 'Ejecutando...';
+ 				
+ 				const url = `http://${SERVER_IP}/sequence`;
  				console.log('[DEBUG] Sending request to:', url);
  				try{
  					const response = await fetch(url);
@@ -58,20 +58,22 @@
  					if(response.ok){
  						const responseText = await response.text();
  						console.log('[DEBUG] Response text:', responseText);
- 						isOff = !isOff;
- 						console.log('[DEBUG] State toggled - New isOff:', isOff);
- 						updateUI();
+ 						updateUI(responseText);
  					} else {
  						console.error('[ERROR] Response not OK - Status:', response.status);
+ 						updateUI('Error!');
  					}
  				}catch(err){
- 					console.error('[ERROR] Failed to toggle LED:', err);
+ 					console.error('[ERROR] Failed to trigger sequence:', err);
  					console.error('[ERROR] Make sure SERVER_IP is correct:', SERVER_IP);
  					console.error('[ERROR] Make sure ESP32 is running and connected to WiFi');
+ 					updateUI('Error - Ver consola');
+ 				} finally {
+ 					isRunning = false;
  				}
  			}
 
- 			btn.addEventListener('click', toggle);
+ 			btn.addEventListener('click', trigger);
 
  			updateUI();
  		})();
