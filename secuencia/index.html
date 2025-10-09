@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>LED On/Off</title>
+ 	<style>
+ 		html,body{height:100%;margin:0;font-family:Segoe UI,Roboto,Arial,sans-serif;}
+ 		body{display:flex;align-items:center;justify-content:center;background:#fff;}
+ 		.container{text-align:center;padding:12px}
+ 		.led-img{max-width:320px;width:80vw;height:auto;display:block;margin:0 auto;user-select:none}
+ 		.led-button{border:0;background:transparent;padding:0;cursor:pointer}
+ 		.status{margin-top:12px;font-weight:600}
+ 	</style>
+</head>
+<body>
+ 	<div class="container">
+ 		<h1 id="title">LED</h1>
+ 		<button id="led-toggle" class="led-button" aria-pressed="false" aria-label="Turn LED on" title="Turn LED on">
+ 			<img id="led-img" class="led-img" src="button_off.png" alt="LED is off" draggable="false">
+ 		</button>
+
+ 		<div class="status"><strong id="state-text">OFF</strong></div>
+ 	</div>
+
+ 	<script>
+ 		(function(){
+ 			const btn = document.getElementById('led-toggle');
+ 			const img = document.getElementById('led-img');
+ 			const stateText = document.getElementById('state-text');
+
+ 			const OFF_SRC = 'button_off.png';
+ 			const ON_SRC = 'button_on.png';
+ 			const SERVER_IP = '192.168.100.80';
+
+ 			let isOff = true;
+
+ 			function updateUI(){
+ 				console.log('[DEBUG] Updating UI - isOff:', isOff);
+ 				btn.setAttribute('aria-pressed', String(!isOff));
+ 				btn.setAttribute('aria-label', isOff ? 'Turn LED on' : 'Turn LED off');
+ 				btn.title = isOff ? 'Turn LED on' : 'Turn LED off';
+ 				img.src = isOff ? ON_SRC : OFF_SRC;
+ 				stateText.textContent = isOff ? 'ENCENDER' : 'APAGAR';
+ 				console.log('[DEBUG] UI updated - Image:', img.src, '- Text:', stateText.textContent);
+ 			}
+
+ 			async function toggle(e){
+ 				console.log('[DEBUG] Button clicked!');
+ 				if(e && typeof e.preventDefault === 'function') e.preventDefault();
+ 				const endpoint = isOff ? '/led/on' : '/led/off';
+ 				const url = `http://${SERVER_IP}${endpoint}`;
+ 				console.log('[DEBUG] Current state - isOff:', isOff);
+ 				console.log('[DEBUG] Sending request to:', url);
+ 				try{
+ 					const response = await fetch(url);
+ 					console.log('[DEBUG] Response received - Status:', response.status, '- OK:', response.ok);
+ 					if(response.ok){
+ 						const responseText = await response.text();
+ 						console.log('[DEBUG] Response text:', responseText);
+ 						isOff = !isOff;
+ 						console.log('[DEBUG] State toggled - New isOff:', isOff);
+ 						updateUI();
+ 					} else {
+ 						console.error('[ERROR] Response not OK - Status:', response.status);
+ 					}
+ 				}catch(err){
+ 					console.error('[ERROR] Failed to toggle LED:', err);
+ 					console.error('[ERROR] Make sure SERVER_IP is correct:', SERVER_IP);
+ 					console.error('[ERROR] Make sure ESP32 is running and connected to WiFi');
+ 				}
+ 			}
+
+ 			btn.addEventListener('click', toggle);
+
+ 			updateUI();
+ 		})();
+ 	</script>
+</body>
+</html>
