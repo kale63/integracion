@@ -6,12 +6,10 @@ const char* password = "";
 
 WebServer server(80);
 
-// Light 1 pins (21, 19, 18)
 const int greenPin1 = 21;
 const int yellowPin1 = 19;
 const int redPin1 = 18;
 
-// Light 2 pins (23, 16, 17)
 const int greenPin2 = 15;
 const int yellowPin2 = 16;
 const int redPin2 = 17;
@@ -21,8 +19,8 @@ bool light2Active = false;
 bool bothActive = false;
 
 void runSynchronizedSequence() {
-  // Light 1 Green + Light 2 Green
-  digitalWrite(greenPin1, HIGH); digitalWrite(greenPin2, HIGH); 
+  //green
+  digitalWrite(greenPin1, HIGH); digitalWrite(redPin2, HIGH); 
   delay(3000); 
   digitalWrite(greenPin1, LOW); 
   delay(100);
@@ -31,32 +29,30 @@ void runSynchronizedSequence() {
   digitalWrite(greenPin1, HIGH); delay(500); 
   digitalWrite(greenPin1, LOW);  
   delay(100); 
-  
-  // Light 1 Yellow + Light 2 still Green
+  // yellow
   digitalWrite(yellowPin1, HIGH);
   delay(2500); 
-  digitalWrite(yellowPin1, LOW); digitalWrite(greenPin2, LOW); 
+  digitalWrite(yellowPin1, LOW); digitalWrite(redPin2, LOW); 
   delay(75);
-  
-  // Light 1 Red + Light 2 Yellow/Green
-  digitalWrite(redPin1, HIGH); digitalWrite(yellowPin2, HIGH); 
+  // idk
+  digitalWrite(greenPin2, HIGH); digitalWrite(redPin1, HIGH); 
   delay(3000); 
-  digitalWrite(yellowPin2, LOW); 
+  digitalWrite(greenPin2, LOW); 
   delay(100);
-  digitalWrite(yellowPin2, HIGH); delay(500); digitalWrite(yellowPin2, LOW); delay(100);
-  digitalWrite(yellowPin2, HIGH); delay(500); digitalWrite(yellowPin2, LOW); delay(100);
-  digitalWrite(yellowPin2, HIGH); delay(500); 
-  digitalWrite(yellowPin2, LOW);  
+  digitalWrite(greenPin2, HIGH); delay(500); digitalWrite(greenPin2, LOW); delay(100);
+  digitalWrite(greenPin2, HIGH); delay(500); digitalWrite(greenPin2, LOW); delay(100);
+  digitalWrite(greenPin2, HIGH); delay(500); 
+  digitalWrite(greenPin2, LOW);  
   delay(100); 
-  
-  // Light 1 Red + Light 2 Yellow
-  digitalWrite(redPin2, HIGH);
+  // yellow
+  digitalWrite(yellowPin2, HIGH);
   delay(2500); 
-  digitalWrite(redPin2, LOW); digitalWrite(redPin1, LOW); 
+  digitalWrite(yellowPin2, LOW); digitalWrite(redPin1, LOW); 
   delay(75);
 }
 
 void runLight1Sequence() {
+  digitalWrite(yellowPin1, LOW);
   // green
   digitalWrite(greenPin1, HIGH);
   delay(3000); 
@@ -82,6 +78,7 @@ void runLight1Sequence() {
 }
 
 void runLight2Sequence() {
+  digitalWrite(yellowPin2, LOW);
   // green
   digitalWrite(greenPin2, HIGH);
   delay(3000); 
@@ -109,28 +106,12 @@ void runLight2Sequence() {
 void setLightYellow(int lightNumber) {
   if (lightNumber == 1) {
     digitalWrite(greenPin1, LOW);
-    digitalWrite(redPin1, LOW);
-    // Blink yellow
-    for (int i = 0; i < 3; i++) {
-      digitalWrite(yellowPin1, HIGH);
-      delay(300);
-      digitalWrite(yellowPin1, LOW);
-      delay(300);
-    }
-    // Keep yellow on after blinking
     digitalWrite(yellowPin1, HIGH);
+    digitalWrite(redPin1, LOW);
   } else {
     digitalWrite(greenPin2, LOW);
-    digitalWrite(redPin2, LOW);
-    // Blink yellow
-    for (int i = 0; i < 3; i++) {
-      digitalWrite(yellowPin2, HIGH);
-      delay(300);
-      digitalWrite(yellowPin2, LOW);
-      delay(300);
-    }
-    // Keep yellow on after blinking
     digitalWrite(yellowPin2, HIGH);
+    digitalWrite(redPin2, LOW);
   }
 }
 
@@ -216,5 +197,3 @@ void loop() {
     runLight2Sequence();
   }
 }
-
-
