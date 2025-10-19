@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
-	<title>LED On/Off</title>
+	<title>Control de Semáforos</title>
  	<style>
  		html,body{height:100%;margin:0;font-family:Segoe UI,Roboto,Arial,sans-serif;}
  		body{display:flex;align-items:center;justify-content:center;background:#fff;}
@@ -11,69 +11,160 @@
  		.led-img{max-width:320px;width:80vw;height:auto;display:block;margin:0 auto;user-select:none}
  		.led-button{border:0;background:transparent;padding:0;cursor:pointer}
  		.status{margin-top:12px;font-weight:600}
+		.semaforo{display:inline-block; margin: 10px;}
+		.semaforo img{max-width:150px; width:30vw; height:auto; display:block; margin:0 auto; user-select:none;}
  	</style>
 </head>
 <body>
  	<div class="container">
  		<h1 id="title">Cruce</h1>
- 		<button id="led-toggle" class="led-button" aria-pressed="false" aria-label="Turn LED on" title="Turn LED on">
- 			<img id="led-img" class="led-img" src="button_off.png" alt="LED is off" draggable="false">
- 		</button>
+		<h4>Equipo 9</h4>
+		<p>Angel Gabriel Aguilar Saldivar - 202224429, Diego Cannata Cárdenas - 202229430, Keira Marisa Garrido Aguirre - 202230800</p>
+ 		
+		<div class="semaforo">
+			<img src="yellow.png" alt="Semáforo 1" id="semaforo">
+			<button id="light1" class="led-button" aria-pressed="false" aria-label="Iniciar semáforo" title="Iniciar semáforo">
+				<img class="led-img" src="button.png" alt="Botón de inicio" draggable="false">
+			</button>
+		</div>
 
- 		<div class="status"><strong id="state-text">OFF</strong></div>
- 	</div>
+		<div class="semaforo">
+			<img src="yellow.png" alt="Semáforo 2" id="semaforo">
+			<button id="light2" class="led-button" aria-pressed="false" aria-label="Iniciar semáforo" title="Iniciar semáforo">
+				<img class="led-img" src="button.png" alt="Botón de inicio" draggable="false">
+			</button>
+		</div>
+	</div>
 
  	<script>
  		(function(){
- 			const btn = document.getElementById('led-toggle');
- 			const img = document.getElementById('led-img');
- 			const stateText = document.getElementById('state-text');
-
- 			const OFF_SRC = 'button_off.png';
- 			const ON_SRC = 'button_on.png';
+ 			const light1Button = document.getElementById('light1');
+ 			const light2Button = document.getElementById('light2');
+ 			const semaforos = document.querySelectorAll('.semaforo img[id="semaforo"]');
  			const SERVER_IP = '192.168.100.80';
 
- 			let isOff = true;
+ 			// Traffic light states
+ 			const LIGHT_GREEN = 'green.png';
+ 			const LIGHT_YELLOW = 'yellow.png';
+ 			const LIGHT_RED = 'red.png';
 
- 			function updateUI(){
- 				console.log('[DEBUG] Updating UI - isOff:', isOff);
- 				btn.setAttribute('aria-pressed', String(!isOff));
- 				btn.setAttribute('aria-label', isOff ? 'Turn LED on' : 'Turn LED off');
- 				btn.title = isOff ? 'Turn LED on' : 'Turn LED off';
- 				img.src = isOff ? ON_SRC : OFF_SRC;
- 				stateText.textContent = isOff ? 'ENCENDER' : 'APAGAR';
- 				console.log('[DEBUG] UI updated - Image:', img.src, '- Text:', stateText.textContent);
- 			}
+ 			// Both traffic lights start in yellow
+ 			semaforos.forEach(semaforo => {
+ 				semaforo.src = LIGHT_YELLOW;
+ 			});
+ 			
+			stateText.textContent = 'AMARILLO';
+			
+			// Track if a semaphore is currently cycling and its interval
+			const semaphoreActive = [false, false];
+			const semaphoreIntervals = [null, null];
+			const CYCLE_INTERVAL = 2000; // 2 seconds between state changes
 
- 			async function toggle(e){
- 				console.log('[DEBUG] Button clicked!');
- 				if(e && typeof e.preventDefault === 'function') e.preventDefault();
- 				const endpoint = isOff ? '/led/on' : '/led/off';
- 				const url = `http://${SERVER_IP}${endpoint}`;
- 				console.log('[DEBUG] Current state - isOff:', isOff);
- 				console.log('[DEBUG] Sending request to:', url);
- 				try{
- 					const response = await fetch(url);
- 					console.log('[DEBUG] Response received - Status:', response.status, '- OK:', response.ok);
- 					if(response.ok){
- 						const responseText = await response.text();
- 						console.log('[DEBUG] Response text:', responseText);
- 						isOff = !isOff;
- 						console.log('[DEBUG] State toggled - New isOff:', isOff);
- 						updateUI();
- 					} else {
- 						console.error('[ERROR] Response not OK - Status:', response.status);
- 					}
- 				}catch(err){
- 					console.error('[ERROR] Failed to toggle LED:', err);
- 					console.error('[ERROR] Make sure SERVER_IP is correct:', SERVER_IP);
- 					console.error('[ERROR] Make sure ESP32 is running and connected to WiFi');
- 				}
- 			}
+			// Helper function to determine which endpoint to call
+			async function sendStatusUpdate() {
+				const light1On = semaphoreActive[0];
+				const light2On = semaphoreActive[1];
+				
+				let endpoint = '';
+				if (light1On && light2On) {
+					endpoint = '/status/both-on';
+				} else if (light1On) {
+					endpoint = '/status/light1-on';
+				} else if (light2On) {
+					endpoint = '/status/light2-on';
+				} else {
+					endpoint = '/status/all-off';
+				}
+				
+				try {
+					const url = `http://${SERVER_IP}${endpoint}`;
+					console.log(`[DEBUG] Sending status update to: ${url}`);
+					
+					const response = await fetch(url);
+					if (!response.ok) {
+						console.error(`[ERROR] Failed to send status update - Status: ${response.status}`);
+					} else {
+						const responseText = await response.text();
+						console.log(`[DEBUG] Status update response: ${responseText}`);
+					}
+				} catch(err) {
+					console.error('[ERROR] Failed to communicate with server:', err);
+				}
+			}
 
- 			btn.addEventListener('click', toggle);
+			// Function to cycle the traffic light: Green -> Yellow -> Red -> Green
+			function cycleTrafficLight(semaforo) {
+				const currentState = semaforo.src.split('/').pop();
+				
+				if(currentState === LIGHT_GREEN) {
+					semaforo.src = LIGHT_YELLOW;
+					return 'AMARILLO';
+				} 
+				else if(currentState === LIGHT_YELLOW) {
+					semaforo.src = LIGHT_RED;
+					return 'ROJO';
+				} 
+				else {
+					// Red goes back to Green to continue the cycle
+					semaforo.src = LIGHT_GREEN;
+					return 'VERDE';
+				}
+			}
 
- 			updateUI();
+			async function startAutoCycle(semaforo, lightNumber) {
+				const index = lightNumber - 1;
+				
+				// Start with green if not already active
+				if (!semaphoreActive[index]) {
+					semaforo.src = LIGHT_GREEN;
+					stateText.textContent = 'VERDE';
+					semaphoreActive[index] = true;
+					
+					// Set up automatic cycling
+					semaphoreIntervals[index] = setInterval(async () => {
+						const newState = cycleTrafficLight(semaforo);
+						stateText.textContent = newState;
+					}, CYCLE_INTERVAL);
+				}
+			}
+
+			function stopAutoCycle(semaforo, lightNumber) {
+				const index = lightNumber - 1;
+				
+				if (semaphoreActive[index]) {
+					// Clear the interval
+					clearInterval(semaphoreIntervals[index]);
+					semaphoreIntervals[index] = null;
+					
+					// Return to yellow (idle state)
+					semaforo.src = LIGHT_YELLOW;
+					stateText.textContent = 'AMARILLO';
+					semaphoreActive[index] = false;
+					
+					console.log(`[DEBUG] Traffic Light ${lightNumber} turned off`);
+				}
+			}
+
+			async function toggleLight(e, semaforo, lightNumber) {
+				console.log(`[DEBUG] Traffic Light ${lightNumber} button clicked!`);
+				if(e && typeof e.preventDefault === 'function') e.preventDefault();
+				
+				const index = lightNumber - 1;
+				
+				// Toggle on/off
+				if (!semaphoreActive[index]) {
+					startAutoCycle(semaforo, lightNumber);
+				} else {
+					stopAutoCycle(semaforo, lightNumber);
+				}
+				
+				// Send status update after a short delay to ensure state is updated
+				setTimeout(() => {
+					sendStatusUpdate();
+				}, 100);
+			} 			// Add event listeners to the buttons
+ 			light1Button.addEventListener('click', (e) => toggleLight(e, semaforos[0], 1));
+ 			light2Button.addEventListener('click', (e) => toggleLight(e, semaforos[1], 2));
  		})();
  	</script>
 </body>
