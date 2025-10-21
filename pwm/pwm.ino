@@ -4,26 +4,29 @@
 const char* ssid = "";
 const char* password = "";
 
-const int ledPin = 18;
+const int pinPot = 33;
+const int freq = 5000;
+float volt = 0.0;
+int pot = 0;
 
-WebServer server(80); 
+WebServer server(80);
 
-void handleOn() {
-  digitalWrite(ledPin, HIGH);
-  Serial.println("LED ON command received.");
+void handlePWMValue() {
+  pot = analogRead(pinPot);
+  volt = (pot * 3.3) / 4095;
+  Serial.print("POT value: ");
+  Serial.print(pot);
+  Serial.print(" | Voltage: ");
+  Serial.println(volt);
+  
+  ledcWrite(21, pot);
+  
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-  server.send(200, "text/plain", "LED is ON");
-}
-
-void handleOff() {
-  digitalWrite(ledPin, LOW);
-  Serial.println("LED OFF command received.");
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-  server.send(200, "text/plain", "LED is OFF");
+  
+  String response = String(volt, 2);
+  server.send(200, "text/plain", response);
 }
 
 void handleNotFound() {
@@ -37,8 +40,7 @@ void handleNotFound() {
 
 void setup() {
   Serial.begin(115200);
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
+  ledcAttach(21, freq, 12);
 
   Serial.print("Conectao a");
   Serial.println(ssid);
@@ -51,8 +53,7 @@ void setup() {
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
 
-  server.on("/led/on", HTTP_GET, handleOn);
-  server.on("/led/off", HTTP_GET, handleOff);
+  server.on("/pwm/value", HTTP_GET, handlePWMValue);
   server.onNotFound(handleNotFound);
   
   server.begin(); 

@@ -4,26 +4,45 @@
 const char* ssid = "";
 const char* password = "";
 
-const int ledPin = 18;
+const int pin21 = 21;
+const int pin19 = 19;
+float volt = 0.0;
+int sliderValue = 0;
 
-WebServer server(80); 
+WebServer server(80);
 
-void handleOn() {
-  digitalWrite(ledPin, HIGH);
-  Serial.println("LED ON command received.");
+
+void handlePotValue() {
+  // Get slider value from query parameter
+  if (server.hasArg("value")) {
+    sliderValue = server.arg("value").toInt();
+  }
+  
+  volt = (sliderValue * 3.3) / 4095;
+  
+  Serial.print("Slider value: ");
+  Serial.print(sliderValue);
+  Serial.print(" | Voltage: ");
+  Serial.println(volt);
+  
+  // Control LEDs based on voltage
+  if (volt >= 1.5 && volt < 2.2) {
+    digitalWrite(pin21, HIGH);
+    digitalWrite(pin19, LOW);
+  } else if (volt >= 2.2) {
+    digitalWrite(pin21, LOW);
+    digitalWrite(pin19, HIGH);
+  } else {
+    digitalWrite(pin21, LOW);
+    digitalWrite(pin19, LOW);
+  }
+  
   server.sendHeader("Access-Control-Allow-Origin", "*");
   server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-  server.send(200, "text/plain", "LED is ON");
-}
-
-void handleOff() {
-  digitalWrite(ledPin, LOW);
-  Serial.println("LED OFF command received.");
-  server.sendHeader("Access-Control-Allow-Origin", "*");
-  server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
-  server.send(200, "text/plain", "LED is OFF");
+  
+  String response = String(volt, 2);
+  server.send(200, "text/plain", response);
 }
 
 void handleNotFound() {
@@ -37,8 +56,10 @@ void handleNotFound() {
 
 void setup() {
   Serial.begin(115200);
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
+  pinMode(pin21, OUTPUT);
+  pinMode(pin19, OUTPUT);
+  digitalWrite(pin21, LOW);
+  digitalWrite(pin19, LOW);
 
   Serial.print("Conectao a");
   Serial.println(ssid);
@@ -51,8 +72,7 @@ void setup() {
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
 
-  server.on("/led/on", HTTP_GET, handleOn);
-  server.on("/led/off", HTTP_GET, handleOff);
+  server.on("/pot/value", HTTP_GET, handlePotValue);
   server.onNotFound(handleNotFound);
   
   server.begin(); 

@@ -3,79 +3,85 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
-	<title>LED On/Off</title>
+	<title>Potentiometer</title>
  	<style>
  		html,body{height:100%;margin:0;font-family:Segoe UI,Roboto,Arial,sans-serif;}
  		body{display:flex;align-items:center;justify-content:center;background:#fff;}
- 		.container{text-align:center;padding:12px}
- 		.led-img{max-width:320px;width:80vw;height:auto;display:block;margin:0 auto;user-select:none}
- 		.led-button{border:0;background:transparent;padding:0;cursor:pointer}
- 		.status{margin-top:12px;font-weight:600}
+ 		.container{text-align:center;padding:12px;max-width:500px}
+ 		.slider-container{margin:30px 0}
+ 		input[type="range"]{width:100%;height:8px;cursor:pointer;accent-color:#007bff}
+ 		.value-display{font-size:28px;font-weight:700;margin:20px 0;color:#333}
+ 		.status-leds{display:flex;justify-content:center;gap:20px;margin-top:30px}
+ 		.led-status{width:60px;height:60px;border-radius:50%;background:#ccc;transition:all 0.3s ease}
+ 		.led-status.active{background:#0066ff;box-shadow:0 0 10px rgba(0,102,255,0.8)}
+ 		.led-status.red{background:#ff0000;box-shadow:0 0 10px rgba(255,0,0,0.8)}
+ 		.led-label{font-size:12px;margin-top:5px;font-weight:600}
  	</style>
 </head>
 <body>
  	<div class="container">
- 		<h1 id="title">LED</h1>
+ 		<h1 id="title">Potenciometro</h1>
 		<h4>Equipo 9</h4>
 		<p>Angel Gabriel Aguilar Saldivar - 202224429, Diego Cannata Cárdenas - 202229430, Keira Marisa Garrido Aguirre - 202230800</p>
- 		<button id="led-toggle" class="led-button" aria-pressed="false" aria-label="Turn LED on" title="Turn LED on">
- 			<img id="led-img" class="led-img" src="button_off.png" alt="LED is off" draggable="false">
- 		</button>
-
- 		<div class="status"><strong id="state-text">OFF</strong></div>
+ 		
+ 		<div class="slider-container">
+ 			<input type="range" id="potSlider" min="0" max="4095" value="0">
+ 		</div>
+ 		
+ 		<div class="value-display">
+ 			Voltaje: <span id="voltValue">0.00</span>V
+ 		</div>
+ 		
+ 		<div class="status-leds">
+ 			<div>
+ 				<div id="led-green" class="led-status"></div>
+ 				<div class="led-label">LED 1 (≥1.5V & <2.2V)</div>
+ 			</div>
+ 			<div>
+ 				<div id="led-red" class="led-status"></div>
+ 				<div class="led-label">LED 2 (≥2.2V)</div>
+ 			</div>
+ 		</div>
  	</div>
 
  	<script>
  		(function(){
- 			const btn = document.getElementById('led-toggle');
- 			const img = document.getElementById('led-img');
- 			const stateText = document.getElementById('state-text');
+ 			const slider = document.getElementById('potSlider');
+ 			const voltValue = document.getElementById('voltValue');
+ 			const ledGreen = document.getElementById('led-green');
+ 			const ledRed = document.getElementById('led-red');
+ 			const SERVER_IP = '192.168.100.80';
 
- 			const OFF_SRC = 'button_off.png';
- 			const ON_SRC = 'button_on.png';
- 			const SERVER_IP = '172.26.160.167';
-
- 			let isOff = true;
-
- 			function updateUI(){
- 				console.log('[DEBUG] Updating UI - isOff:', isOff);
- 				btn.setAttribute('aria-pressed', String(!isOff));
- 				btn.setAttribute('aria-label', isOff ? 'Turn LED on' : 'Turn LED off');
- 				btn.title = isOff ? 'Turn LED on' : 'Turn LED off';
- 				img.src = isOff ? ON_SRC : OFF_SRC;
- 				stateText.textContent = isOff ? 'ENCENDER' : 'APAGAR';
- 				console.log('[DEBUG] UI updated - Image:', img.src, '- Text:', stateText.textContent);
- 			}
-
- 			async function toggle(e){
- 				console.log('[DEBUG] Button clicked!');
- 				if(e && typeof e.preventDefault === 'function') e.preventDefault();
- 				const endpoint = isOff ? '/led/on' : '/led/off';
- 				const url = `http://${SERVER_IP}${endpoint}`;
- 				console.log('[DEBUG] Current state - isOff:', isOff);
- 				console.log('[DEBUG] Sending request to:', url);
+ 			async function sendSliderValue(){
  				try{
- 					const response = await fetch(url);
- 					console.log('[DEBUG] Response received - Status:', response.status, '- OK:', response.ok);
+ 					const sliderVal = slider.value;
+ 					const response = await fetch(`http://${SERVER_IP}/pot/value?value=${sliderVal}`);
  					if(response.ok){
- 						const responseText = await response.text();
- 						console.log('[DEBUG] Response text:', responseText);
- 						isOff = !isOff;
- 						console.log('[DEBUG] State toggled - New isOff:', isOff);
- 						updateUI();
- 					} else {
- 						console.error('[ERROR] Response not OK - Status:', response.status);
+ 						const data = await response.text();
+ 						const voltage = parseFloat(data);
+ 						
+ 						voltValue.textContent = voltage.toFixed(2);
+ 						
+ 						// Update LED status based on voltage
+ 						ledGreen.classList.remove('active');
+ 						ledRed.classList.remove('red');
+ 						
+ 						if (voltage >= 1.5 && voltage < 2.2) {
+ 							ledGreen.classList.add('active');
+ 						} else if (voltage >= 2.2) {
+ 							ledRed.classList.add('red');
+ 						}
  					}
  				}catch(err){
- 					console.error('[ERROR] Failed to toggle LED:', err);
- 					console.error('[ERROR] Make sure SERVER_IP is correct:', SERVER_IP);
- 					console.error('[ERROR] Make sure ESP32 is running and connected to WiFi');
+ 					console.error('Failed to send slider value:', err);
  				}
  			}
 
- 			btn.addEventListener('click', toggle);
-
- 			updateUI();
+ 			// Send slider value on input
+ 			slider.addEventListener('input', sendSliderValue);
+ 			
+ 			// Initial update
+ 			sendSliderValue();
  		})();
  	</script>
 </body>
